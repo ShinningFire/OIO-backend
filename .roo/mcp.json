@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"git": {
+			"command": "npx",
+			"args": ["-y", "@cyanheads/git-mcp-server"]
+		}
+	}
+}

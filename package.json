@@ -1,0 +1,40 @@
+{
+  "name": "oio-backend",
+  "version": "1.0.0",
+  "description": "oio backend",
+  "homepage": "https://github.com/ShinningFire/OIO-backend#readme",
+  "bugs": {
+    "url": "https://github.com/ShinningFire/OIO-backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShinningFire/OIO-backend.git"
+  },
+  "license": "ISC",
+  "author": "liyer",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "dev": "nodemon main.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:llm": "node scripts/test-llm.js"
+  },
+  "dependencies": {
+    "@koa/cors": "^5.0.0",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "ioredis": "^5.10.1",
+    "koa": "^2.15.3",
+    "koa-bodyparser": "^4.4.1",
+    "koa-cors": "^0.0.16",
+    "koa-router": "^13.0.1",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.11.0",
+    "openai": "^6.34.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
