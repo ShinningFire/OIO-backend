@@ -11,7 +11,7 @@ import chatRouter from './src/routes/chat.js';
 import messageRouter from './src/routes/message.js';
 
 const app = new Koa();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 
 // 全局错误处理
 app.on('error', (err, ctx) => {
@@ -75,7 +75,7 @@ async function start() {
     console.log('[Cache] Redis 缓存初始化完成');
   }
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0',() => {
     console.log(`🚀 OIO Backend 服务启动成功 (${isCloud ? '云托管模式' : '本地开发模式'})`);
     console.log(`📡 监听端口: ${PORT}`);
     console.log(`🔗 访问地址: http://localhost:${PORT}`);
