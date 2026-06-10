@@ -7,63 +7,10 @@ import { checkUserInput, checkAIOutput } from '../middleware/contentCheck.js';
 
 const router = new Router({ prefix: '/api/message' });
 
-/**
- * POST /api/message/leave
- * 异步留言接口 - 用户留言存入数据库，后台异步触发AI回复
- * 
- * Body: { userId: string, conversationId?: string, content: string }
- * Response: { code: number, message: string, data: { messageId, conversationId } }
- */
-router.post('/leave', async (ctx) => {
-  const { userId, conversationId: convId, content } = ctx.request.body;
-
-  if (!userId || !content) {
-    ctx.body = { code: 400, message: '缺少参数 userId 或 content', data: null };
-    return;
-  }
-
-  // 内容审核 - 用户输入
-  const inputCheck = await checkUserInput(content);
-  if (!inputCheck.safe) {
-    await EventLogger.logModeration(userId, convId || 'unknown', 'user_input', content);
-    ctx.body = { code: 403, message: inputCheck.message, data: null };
-    return;
-  }
-
-  try {
-    // 获取或创建对话
-    let conversationId = convId;
-    if (!conversationId) {
-      conversationId = uuidv4();
-      await db.run('INSERT INTO conversations (id, user_id) VALUES (?, ?)', [conversationId, userId]);
-    }
-
-    // 保存用户留言
-    const result = await db.run(
-      'INSERT INTO messages (conversation_id, user_id, role, content) VALUES (?, ?, ?, ?)',
-      [conversationId, userId, 'user', content]
-    );
-
-    await EventLogger.logUserMessage(userId, conversationId, content);
-
-    // 异步触发AI回复（不阻塞响应）
-    triggerAIReply(conversationId, userId).catch((err) => {
-      console.error('[Message] AI异步回复失败:', err.message);
-    });
-
-    ctx.body = {
-      code: 0,
-      message: '留言成功，AI正在回复中',
-      data: {
-        messageId: result.insertId,
-        conversationId,
-      },
-    };
-  } catch (err) {
-    console.error('[Message] 留言失败:', err.message);
-    ctx.body = { code: 500, message: `留言失败: ${err.message}`, data: null };
-  }
-});
+// 已按需求临时注释下线：POST /api/message/leave
+// router.post('/leave', async (ctx) => {
+//   ...
+// });
 
 /**
  * GET /api/message/list
@@ -107,40 +54,10 @@ router.get('/list', async (ctx) => {
   }
 });
 
-/**
- * GET /api/message/conversations
- * 获取用户的对话列表
- * 
- * Query: { userId: string }
- */
-router.get('/conversations', async (ctx) => {
-  const { userId } = ctx.query;
-
-  if (!userId) {
-    ctx.body = { code: 400, message: '缺少参数 userId', data: null };
-    return;
-  }
-
-  try {
-    const conversations = await db.all(`
-      SELECT c.id, c.created_at, c.updated_at,
-        (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
-        (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count
-      FROM conversations c
-      WHERE c.user_id = ?
-      ORDER BY c.updated_at DESC
-    `, [userId]);
-
-    ctx.body = {
-      code: 0,
-      message: 'success',
-      data: { conversations },
-    };
-  } catch (err) {
-    console.error('[Message] 获取对话列表失败:', err.message);
-    ctx.body = { code: 500, message: `获取对话列表失败: ${err.message}`, data: null };
-  }
-});
+// 已按需求临时注释下线：GET /api/message/conversations
+// router.get('/conversations', async (ctx) => {
+//   ...
+// });
 
 /**
  * 异步触发AI回复

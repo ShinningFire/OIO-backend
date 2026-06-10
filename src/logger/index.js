@@ -2,16 +2,8 @@ import morgan from 'morgan';
 import db from '../db/init.js';
 
 /**
- * HTTP 请求日志模块
- * - 本地开发: morgan (控制台输出)
- * - 线上环境: 预留接口，待定
- *
- * 通过 RUNTIME_ENV 环境变量区分:
- *   RUNTIME_ENV=cloud  -> 线上日志（预留）
- *   其他 (默认)        -> morgan
+ * HTTP 请求日志模块 - 使用 morgan 输出控制台日志
  */
-
-const isCloud = process.env.RUNTIME_ENV === 'cloud';
 
 // ========== HTTP 请求日志 (morgan) ==========
 
@@ -22,24 +14,10 @@ const isCloud = process.env.RUNTIME_ENV === 'cloud';
  * @returns {Function} Koa 中间件
  */
 export function httpLogger(format = 'dev') {
-  if (isCloud) {
-    // 线上环境: 预留接口，目前使用简单的 console 输出
-    // TODO: 替换为线上日志服务（如云托管日志、日志平台SDK等）
-    return async (ctx, next) => {
-      const start = Date.now();
-      await next();
-      const ms = Date.now() - start;
-      console.log(`[Cloud] ${ctx.method} ${ctx.url} ${ctx.status} ${ms}ms`);
-    };
-  }
-
-  // 本地环境: 使用 morgan
-  // 将 morgan 包装为 Koa 中间件
   const morganMiddleware = morgan(format);
 
   return async (ctx, next) => {
     await new Promise((resolve, reject) => {
-      // morgan 期望 (req, res, callback) 签名
       morganMiddleware(ctx.req, ctx.res, (err) => {
         if (err) reject(err);
         else resolve();

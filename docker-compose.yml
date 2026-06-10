@@ -1,0 +1,40 @@
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - '27081:80'
+    container_name: wxcloud_oio-backend
+    labels:
+      - wxPort=27082
+      - hostPort=27081
+      - wxcloud=oio-backend
+      - role=container
+    environment:
+      - MYSQL_USERNAME=
+      - MYSQL_PASSWORD=
+      - MYSQL_ADDRESS=
+      - WX_APPID=wxe9afc4fe21caf50d
+      - WX_SECRET=62f70ecef895482615306896eae667a9
+      - RUNTIME_ENV=local
+      - DB_HOST=10.47.106.115
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=42tmwwfM
+      - DB_NAME=oio
+      - REDIS_HOST=10.0.0.5
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=TD93xqR!
+      - REDIS_DB=0
+      - OPENAI_API_KEY=14a9e730-7b03-4869-b904-2e1ded34dd51
+      - OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+      - LLM_MODEL=doubao-seed-character-251128
+networks:
+  default:
+    external:
+      name: wxcb0

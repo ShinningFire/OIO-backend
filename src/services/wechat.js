@@ -52,7 +52,7 @@ export async function getAccessToken() {
   }
 
   const appid = process.env.WX_APPID;
-  const secret = process.env.WX_SECRET;
+  const secret = process.env.WX_APPSECRET;
 
   const res = await axios.get('https://api.weixin.qq.com/cgi-bin/token', {
     params: {

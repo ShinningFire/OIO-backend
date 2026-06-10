@@ -9,6 +9,9 @@ import { httpLogger } from './src/logger/index.js';
 import authRouter from './src/routes/auth.js';
 import chatRouter from './src/routes/chat.js';
 import messageRouter from './src/routes/message.js';
+import userRouter from './src/routes/user.js';
+import accompanyRouter from './src/routes/accompany.js';
+import { authMiddleware } from './src/middleware/auth.js';
 
 const app = new Koa();
 const PORT = process.env.PORT || 80;
@@ -34,6 +37,7 @@ app.use(bodyParser({
 // 中间件: HTTP 请求日志 (本地: morgan, 线上: 预留)
 app.use(httpLogger('dev'));
 
+
 // 中间件: 全局异常捕获
 app.use(async (ctx, next) => {
   try {
@@ -49,10 +53,15 @@ app.use(async (ctx, next) => {
   }
 });
 
+// 中间件: 全局登录态验证 (白名单: /api/auth/login, /health)
+app.use(authMiddleware);
+
 // 注册路由
 app.use(authRouter.routes()).use(authRouter.allowedMethods());
 app.use(chatRouter.routes()).use(chatRouter.allowedMethods());
 app.use(messageRouter.routes()).use(messageRouter.allowedMethods());
+app.use(userRouter.routes()).use(userRouter.allowedMethods());
+app.use(accompanyRouter.routes()).use(accompanyRouter.allowedMethods());
 
 // 健康检查
 app.use(async (ctx) => {
@@ -63,7 +72,7 @@ app.use(async (ctx) => {
 
 // 等待数据库和缓存初始化完成后启动服务器
 async function start() {
-  const isCloud = process.env.RUNTIME_ENV === 'cloud';
+  console.log('[Startup] 服务启动中...');
 
   // 初始化数据库
   await db.ensureReady();
@@ -71,12 +80,10 @@ async function start() {
 
   // 初始化缓存
   await cache.init();
-  if (!isCloud) {
-    console.log('[Cache] Redis 缓存初始化完成');
-  }
+  console.log('[Cache] Redis 缓存初始化完成');
 
   app.listen(PORT, '0.0.0.0',() => {
-    console.log(`🚀 OIO Backend 服务启动成功 (${isCloud ? '云托管模式' : '本地开发模式'})`);
+    console.log(`🚀 OIO Backend 服务启动成功`);
     console.log(`📡 监听端口: ${PORT}`);
     console.log(`🔗 访问地址: http://localhost:${PORT}`);
     console.log(`❤️  健康检查: http://localhost:${PORT}/health`);

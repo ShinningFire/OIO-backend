@@ -2,21 +2,11 @@ import Redis from 'ioredis';
 
 /**
  * 登录信息缓存模块
- * - 本地开发: Redis
- * - 线上环境: 微信小程序原生登录态（预留接口，线上不依赖 Redis）
- *
- * 通过 RUNTIME_ENV 环境变量区分:
- *   RUNTIME_ENV=cloud  -> 微信云托管（线上无需 Redis，session 由微信管理）
- *   其他 (默认)        -> 本地 Redis
+ * 统一使用 REDIS_HOST / REDIS_PORT / REDIS_PASSWORD 环境变量连接 Redis
  */
-
-const isCloud = process.env.RUNTIME_ENV === 'cloud';
 
 let redis = null;
 
-/**
- * 获取 Redis 实例（仅本地环境使用）
- */
 function getRedis() {
   if (redis) return redis;
 
@@ -30,6 +20,8 @@ function getRedis() {
       return delay;
     },
     maxRetriesPerRequest: 3,
+    connectTimeout: 10000,
+    enableReadyCheck: false,
   });
 
   redis.on('error', (err) => {
@@ -37,7 +29,11 @@ function getRedis() {
   });
 
   redis.on('connect', () => {
-    console.log('[Redis] 连接成功');
+    console.log(`[Redis] TCP连接成功 -> ${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`);
+  });
+
+  redis.on('ready', () => {
+    console.log('[Redis] 已就绪，可接受命令 ✅');
   });
 
   return redis;
@@ -51,53 +47,56 @@ const SESSION_TTL = 7 * 24 * 60 * 60;
  */
 class CacheManager {
   /**
-   * 初始化缓存连接
+   * 初始化缓存连接，等待 Redis 真正就绪后才 resolve
+   * 避免服务器启动后立即收到请求时 Redis 尚未连接导致超时
    */
   async init() {
-    if (isCloud) {
-      console.log('[Cache] 云托管模式，跳过 Redis 初始化（登录态由微信管理）');
-      return;
-    }
-    getRedis();
+    console.log(`[Cache] Redis 初始化 -> ${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`);
+    const client = getRedis();
+
+    // 如果已经就绪则直接返回
+    if (client.status === 'ready') return;
+
+    await new Promise((resolve, reject) => {
+      const onReady = () => { cleanup(); resolve(); };
+      const onError = (err) => { cleanup(); reject(err); };
+      const cleanup = () => {
+        client.removeListener('ready', onReady);
+        client.removeListener('error', onError);
+      };
+      client.once('ready', onReady);
+      client.once('error', onError);
+    });
   }
 
   /**
    * 保存用户登录 session
-   * @param {string} openid - 用户 openid
+   * @param {string} sessionId - 会话标识（可使用 token）
    * @param {Object} sessionData - session 数据 { sessionKey, ... }
    * @param {number} [ttl] - 过期时间(秒)，默认7天
    */
-  async setSession(openid, sessionData, ttl = SESSION_TTL) {
-    if (isCloud) {
-      // 云托管模式: 不需要自行管理 session，微信负责
-      return;
-    }
-    const key = `session:${openid}`;
+  async setSession(sessionId, sessionData, ttl = SESSION_TTL) {
+    const key = `session:${sessionId}`;
     await getRedis().set(key, JSON.stringify(sessionData), 'EX', ttl);
   }
 
   /**
    * 获取用户登录 session
-   * @param {string} openid - 用户 openid
+   * @param {string} sessionId - 会话标识（可使用 token）
    * @returns {Promise<Object|null>} session 数据或 null
    */
-  async getSession(openid) {
-    if (isCloud) {
-      // 云托管模式: 返回 null，由微信管理登录态
-      return null;
-    }
-    const key = `session:${openid}`;
+  async getSession(sessionId) {
+    const key = `session:${sessionId}`;
     const data = await getRedis().get(key);
     return data ? JSON.parse(data) : null;
   }
 
   /**
    * 删除用户登录 session
-   * @param {string} openid - 用户 openid
+   * @param {string} sessionId - 会话标识（可使用 token）
    */
-  async deleteSession(openid) {
-    if (isCloud) return;
-    const key = `session:${openid}`;
+  async deleteSession(sessionId) {
+    const key = `session:${sessionId}`;
     await getRedis().del(key);
   }
 
@@ -108,7 +107,6 @@ class CacheManager {
    * @param {number} [ttl] - 过期时间(秒)
    */
   async set(key, value, ttl) {
-    if (isCloud) return;
     const strValue = typeof value === 'string' ? value : JSON.stringify(value);
     if (ttl) {
       await getRedis().set(key, strValue, 'EX', ttl);
@@ -123,7 +121,6 @@ class CacheManager {
    * @returns {Promise<string|null>}
    */
   async get(key) {
-    if (isCloud) return null;
     return await getRedis().get(key);
   }
 
@@ -132,7 +129,6 @@ class CacheManager {
    * @param {string} key
    */
   async del(key) {
-    if (isCloud) return;
     await getRedis().del(key);
   }
 
